@@ -1,6 +1,33 @@
 const { JSDOM } = require('jsdom');
 
 
+async function crawlPage(currentURL) {
+    console.log(`actively crawling ${currentURL}`);
+
+    try {
+        const response = await fetch(currentURL);
+
+        if (response.status > 399) { 
+            console.log(`error: ${response.status} on page: "${currentURL}"`);
+            return;
+        }
+
+        //check if response is html
+        const contentType = response.headers.get('content-type');
+
+        if (!contentType || !contentType.includes('text/html')) {
+            console.log(`error: non html response, content type: ${contentType} on page "${currentURL}"`);
+            return;
+        }
+
+
+        //console.log(await response.text())
+    } catch (error) {
+        console.log(`error in fetch:  ${error.message} on page: "${currentURL}"`);
+    }
+
+}
+
 function getURLsFromHTML(htmlBody, baseURL) {
     const urls = [];
     const dom = new JSDOM(htmlBody);
@@ -25,7 +52,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
 
             try {
                 const urlObj = new URL(link.href);
-                urls.push(link.href);                
+                urls.push(urlObj.href);                
             } catch (error) {
                 console.log ('Error creating URL:', error)   
             }
@@ -35,8 +62,6 @@ function getURLsFromHTML(htmlBody, baseURL) {
 
     return urls;s
 }
-
-
 
 function normalizeURL(urlString) {
     const urlObj = new URL(urlString);
@@ -50,6 +75,7 @@ function normalizeURL(urlString) {
 }
 
 module.exports = {
+    crawlPage,
+    getURLsFromHTML,
     normalizeURL,
-    getURLsFromHTML
 }
