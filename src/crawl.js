@@ -12,7 +12,9 @@ async function crawlPage(baseURL, currentURL, pages) {
     }
 
     const normalizedURL = normalizeURL(currentURL);
-    if (pages[normalizedURL] > 0) {
+    
+    //if (pages[normalizedURL] > 0) {
+    if (pages.hasOwnProperty(normalizedURL)) {
         pages[normalizedURL]++;     // so we can track how many times we have attempted crawling this page
         //console.log(`already crawled ${currentURL}`);
         return pages;
@@ -20,7 +22,7 @@ async function crawlPage(baseURL, currentURL, pages) {
 
     pages[normalizedURL] = 1; // mark as crawled
 
-    //console.log(`actively crawling ${currentURL}`);
+    console.log(`>>>>>>>>>>  actively crawling ${currentURL}`);
 
     try {
         const response = await fetch(currentURL);
@@ -47,7 +49,7 @@ async function crawlPage(baseURL, currentURL, pages) {
         
         //console.log(`call getURLsFromHTML: ${htmlBody} ${baseURL}`);
 
-        if (contentType.includes('application/pdf')) {
+        if (contentType.includes('application/pdf')||contentType.includes('application/xml')) {
             return pages;
         }
         
@@ -68,18 +70,30 @@ async function crawlPage(baseURL, currentURL, pages) {
 function getURLsFromHTML(htmlBody, baseURL) {
     const urls = [];
     const dom = new JSDOM(htmlBody);
-
+    //console.log(htmlBody)
     const links = dom.window.document.querySelectorAll('a')
 
-
+    // console.log('===============')
     // console.log('links=====')
     // console.log(`first link: ${links[0].href}`)
     // console.log('===============')
     for (const link of links) {
-        if(link.href === '') continue;
+        if(link.href === '' || link.href === '?') continue;
+
+        if (
+            !link.href || // href 속성이 없는 경우
+            //link.offsetParent === null || // 렌더링되지 않은 요소
+            link.style.display === 'none' || // display: none
+            link.style.visibility === 'hidden' || // visibility: hidden
+            link.style.opacity === '0' // opacity: 0
+        ) {
+            console.log(`invisible link: ${link.href}`);
+            continue;
+        }
+
 
         let fullURL = '';
-        //console.log(`link: ${link.href}`);
+
         if(link.href.startsWith('/')) {
 
             try {
@@ -88,7 +102,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
     
                 urls.push(urlObj.href);                
             } catch (error) {
-                console.log (`Error creating URL: '${fullURL}' : ${error}`)   
+                console.log (`Error creating URL: '${link.href}' : ${error}`)   
             }
 
         } else {

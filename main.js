@@ -18,7 +18,10 @@ async function main() {
 
     const pages = await crawlPage(baseURL, baseURL, {});
 
-    printReport(pages);
+
+
+    console.log(`Total pages: ${Object.keys(pages).length}`);
+    //printReport(pages);
 
     // for (const page in pages) {
     //     console.log(`Found ${pages[page]} links to page: ${page}`);
