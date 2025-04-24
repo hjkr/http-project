@@ -35,7 +35,9 @@ async function crawlPage(baseURL, currentURL, pages) {
         //check if response is html
         const contentType = response.headers.get('content-type');
 
-        if (!contentType || !(contentType.includes('text/html') || contentType.includes('application/pdf'))) {
+        if (!contentType || !(contentType.includes('text/html') || 
+                              contentType.includes('application/pdf') ||
+                              contentType.includes('application/xml'))) {
             console.log(`error: non html response, content type: ${contentType} on page "${currentURL}"`);
             return pages;
         }
@@ -68,6 +70,8 @@ function getURLsFromHTML(htmlBody, baseURL) {
     const dom = new JSDOM(htmlBody);
 
     const links = dom.window.document.querySelectorAll('a')
+
+
     // console.log('links=====')
     // console.log(`first link: ${links[0].href}`)
     // console.log('===============')

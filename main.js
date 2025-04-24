@@ -1,5 +1,5 @@
-const { crawlPage } = require("./crawl");
-
+const { crawlPage } = require("./src/crawl");
+const {printReport} = require("./src/report");
 
 async function main() {
     if (process.argv.length < 3) {
@@ -18,9 +18,11 @@ async function main() {
 
     const pages = await crawlPage(baseURL, baseURL, {});
 
-    for (const page of Object.entries(pages)) {
-        console.log(page);
-    }
+    printReport(pages);
+
+    // for (const page in pages) {
+    //     console.log(`Found ${pages[page]} links to page: ${page}`);
+    // }
 }
 
 
