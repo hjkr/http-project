@@ -1,31 +1,66 @@
 const { JSDOM } = require('jsdom');
 
 
-async function crawlPage(currentURL) {
-    console.log(`actively crawling ${currentURL}`);
+async function crawlPage(baseURL, currentURL, pages) {
+    //pages => pages already crawled
+
+    const baseURLObj = new URL(baseURL);
+    const currentURLObj = new URL(currentURL);
+
+    if(baseURLObj.hostname !== currentURLObj.hostname) {    
+        return pages;
+    }
+
+    const normalizedURL = normalizeURL(currentURL);
+    if (pages[normalizedURL] > 0) {
+        pages[normalizedURL]++;     // so we can track how many times we have attempted crawling this page
+        //console.log(`already crawled ${currentURL}`);
+        return pages;
+    }
+
+    pages[normalizedURL] = 1; // mark as crawled
+
+    //console.log(`actively crawling ${currentURL}`);
 
     try {
         const response = await fetch(currentURL);
 
+
         if (response.status > 399) { 
             console.log(`error: ${response.status} on page: "${currentURL}"`);
-            return;
+
+            return pages;
         }
 
         //check if response is html
         const contentType = response.headers.get('content-type');
 
-        if (!contentType || !contentType.includes('text/html')) {
+        if (!contentType || !(contentType.includes('text/html') || contentType.includes('application/pdf'))) {
             console.log(`error: non html response, content type: ${contentType} on page "${currentURL}"`);
-            return;
+            return pages;
         }
+        
+        //console.log(`baseURL: ${currentURL} confirmed!!`);
+        const htmlBody = await response.text();
+        
+        //console.log(`call getURLsFromHTML: ${htmlBody} ${baseURL}`);
 
+        if (contentType.includes('application/pdf')) {
+            return pages;
+        }
+        
+        const nextURLs = getURLsFromHTML(htmlBody, baseURL);
 
-        //console.log(await response.text())
+        for (const nextURL of nextURLs) {
+            if (nextURL !== currentURL) {
+                await crawlPage(baseURL, nextURL, pages);
+            }
+        }
     } catch (error) {
         console.log(`error in fetch:  ${error.message} on page: "${currentURL}"`);
     }
 
+    return pages;
 }
 
 function getURLsFromHTML(htmlBody, baseURL) {
@@ -33,10 +68,14 @@ function getURLsFromHTML(htmlBody, baseURL) {
     const dom = new JSDOM(htmlBody);
 
     const links = dom.window.document.querySelectorAll('a')
- 
+    // console.log('links=====')
+    // console.log(`first link: ${links[0].href}`)
+    // console.log('===============')
     for (const link of links) {
-        let fullURL = '';
+        if(link.href === '') continue;
 
+        let fullURL = '';
+        //console.log(`link: ${link.href}`);
         if(link.href.startsWith('/')) {
 
             try {
@@ -45,7 +84,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
     
                 urls.push(urlObj.href);                
             } catch (error) {
-                console.log ('Error creating URL:', error);
+                console.log (`Error creating URL: '${fullURL}' : ${error}`)   
             }
 
         } else {
@@ -54,7 +93,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
                 const urlObj = new URL(link.href);
                 urls.push(urlObj.href);                
             } catch (error) {
-                console.log ('Error creating URL:', error)   
+                console.log (`Error creating URL: '${link.href}' : ${error}`)   
             }
 
         }
