@@ -1,7 +1,7 @@
 const { JSDOM } = require('jsdom');
 
 
-async function crawlPage(baseURL, currentURL, pages) {
+async function crawlPage(baseURL, currentURL, pages, level = 1) {
     //pages => pages already crawled
 
     const baseURLObj = new URL(baseURL);
@@ -11,8 +11,16 @@ async function crawlPage(baseURL, currentURL, pages) {
         return pages;
     }
 
+
     const normalizedURL = normalizeURL(currentURL);
     
+    // archive page
+
+    //console.log(`normalizedURL: ${normalizedURL} | baseURL: ${baseURL} | currentURL: ${currentURL} | level: ${level}`);
+    if  (normalizedURL === "https://www.amp.co.nz/nz/market-commentary/archive" || 
+        (level > 1 && normalizedURL === baseURL) )       return pages;
+
+        
     //if (pages[normalizedURL] > 0) {
     if (pages.hasOwnProperty(normalizedURL)) {
         pages[normalizedURL]++;     // so we can track how many times we have attempted crawling this page
@@ -22,10 +30,10 @@ async function crawlPage(baseURL, currentURL, pages) {
 
     pages[normalizedURL] = 1; // mark as crawled
 
-    console.log(`>>>>>>>>>>  actively crawling ${currentURL}`);
+    //console.log(`${'>'.repeat(level)}actively crawling ${normalizedURL}`);
 
     try {
-        const response = await fetch(currentURL);
+        const response = await fetch(normalizedURL);
 
 
         if (response.status > 399) { 
@@ -55,9 +63,10 @@ async function crawlPage(baseURL, currentURL, pages) {
         
         const nextURLs = getURLsFromHTML(htmlBody, baseURL);
 
+        level++;
         for (const nextURL of nextURLs) {
             if (nextURL !== currentURL) {
-                await crawlPage(baseURL, nextURL, pages);
+                await crawlPage(baseURL, nextURL, pages, level);
             }
         }
     } catch (error) {
@@ -123,11 +132,12 @@ function getURLsFromHTML(htmlBody, baseURL) {
 function normalizeURL(urlString) {
     const urlObj = new URL(urlString);
 
-    let hostPath = `${urlObj.hostname}${urlObj.pathname}`;
+    let hostPath = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
 
     if (hostPath.length > 0 && hostPath.endsWith('/')) {
         hostPath = hostPath.slice(0, -1);
     }
+    //console.log(`hostpath: ${hostPath}`);
     return hostPath;
 }
 
